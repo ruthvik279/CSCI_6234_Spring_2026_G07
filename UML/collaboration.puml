@@ -1,0 +1,15 @@
+@startuml CollaborationDiagram
+object "Developer" as dev
+object "GitHub" as gh
+object "AnalysisEngine" as engine
+object "StyleAnalyzer" as style
+object "GitHubClient" as client
+
+dev -> gh : 1: Create PR
+gh -> engine : 2: Webhook notification
+engine -> style : 3: analyze(code)
+style -> engine : 4: return issues[]
+engine -> client : 5: postComment(issue)
+client -> gh : 6: POST /repos/.../comments
+gh -> dev : 7: Notification (comment posted)
+@enduml

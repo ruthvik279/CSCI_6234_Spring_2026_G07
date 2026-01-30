@@ -1,0 +1,19 @@
+@startuml StateDiagram
+[*] --> Pending : PR Created
+
+Pending --> InProgress : Review Started
+InProgress --> Analyzing : Running checks
+Analyzing --> IssuesFound : Issues detected
+Analyzing --> Approved : No issues
+
+IssuesFound --> InProgress : Developer fixes code
+IssuesFound --> Rejected : Too many critical issues
+
+Approved --> [*] : Merge approved
+Rejected --> [*] : PR closed
+
+note right of Analyzing
+  Runs multiple analyzers
+  in parallel
+end note
+@enduml

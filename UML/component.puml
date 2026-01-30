@@ -1,0 +1,40 @@
+@startuml ComponentDiagram
+package "Web Layer" {
+  [Dashboard UI]
+  [REST API]
+}
+
+package "Application Layer" {
+  [Webhook Handler]
+  [Analysis Engine]
+  [Report Generator]
+}
+
+package "Analysis Modules" {
+  [Style Analyzer]
+  [Complexity Analyzer]
+  [Security Analyzer]
+  [Bug Detector]
+}
+
+package "Integration Layer" {
+  [GitHub API Client]
+  [Notification Service]
+}
+
+package "Data Layer" {
+  [Database]
+  [Cache (Redis)]
+}
+
+[Dashboard UI] --> [REST API] : HTTP
+[REST API] --> [Analysis Engine] : Calls
+[Webhook Handler] --> [Analysis Engine] : Triggers
+[Analysis Engine] --> [Style Analyzer] : Uses
+[Analysis Engine] --> [Complexity Analyzer] : Uses
+[Analysis Engine] --> [Security Analyzer] : Uses
+[Analysis Engine] --> [GitHub API Client] : Posts comments
+[Analysis Engine] --> [Database] : Stores metrics
+[Report Generator] --> [Database] : Queries
+[REST API] --> [GitHub API Client] : OAuth
+@enduml

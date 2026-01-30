@@ -1,0 +1,24 @@
+@startuml ActivityDiagram
+start
+:Developer creates Pull Request;
+:GitHub sends webhook to system;
+:Fetch PR file changes;
+:Parse changed files;
+fork
+  :Run style checks;
+fork again
+  :Calculate complexity metrics;
+fork again
+  :Detect potential bugs;
+end fork
+:Aggregate all findings;
+if (Issues found?) then (yes)
+  :Generate review comments;
+  :Post comments to GitHub PR;
+else (no)
+  :Post approval comment;
+endif
+:Update quality metrics database;
+:Send notification to developer;
+stop
+@enduml

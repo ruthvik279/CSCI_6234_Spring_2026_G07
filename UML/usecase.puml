@@ -1,0 +1,23 @@
+@startuml UseCaseDiagram
+left to right direction
+actor Developer
+actor "Repository Admin" as Admin
+actor "GitHub" as System
+
+rectangle "Code Review Assistant" {
+  usecase "Submit Pull Request" as UC1
+  usecase "View Review Comments" as UC2
+  usecase "Connect Repository" as UC3
+  usecase "Configure Rules" as UC4
+  usecase "View Dashboard" as UC5
+  usecase "Generate Report" as UC6
+}
+
+Developer --> UC1
+Developer --> UC2
+Developer --> UC5
+Admin --> UC3
+Admin --> UC4
+Admin --> UC6
+System --> UC1 : triggers
+@enduml

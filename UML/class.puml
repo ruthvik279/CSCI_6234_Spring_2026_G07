@@ -1,0 +1,79 @@
+@startuml ClassDiagram
+class Repository {
+  - id: int
+  - name: string
+  - owner: string
+  - githubUrl: string
+  + connect()
+  + disconnect()
+}
+
+class PullRequest {
+  - id: int
+  - number: int
+  - title: string
+  - status: string
+  - filesChanged: List<FileChange>
+  + fetchChanges()
+  + getReviewStatus()
+}
+
+class FileChange {
+  - filename: string
+  - additions: int
+  - deletions: int
+  - patch: string
+  + parseCode()
+}
+
+abstract class Analyzer {
+  # severity: string
+  + analyze(code: string): List<Issue>
+}
+
+class StyleAnalyzer extends Analyzer {
+  - rules: List<StyleRule>
+  + checkStyle()
+}
+
+class ComplexityAnalyzer extends Analyzer {
+  - threshold: int
+  + calculateComplexity()
+}
+
+class SecurityAnalyzer extends Analyzer {
+  - patterns: List<Pattern>
+  + detectVulnerabilities()
+}
+
+class Issue {
+  - lineNumber: int
+  - severity: string
+  - message: string
+  - suggestion: string
+  + format()
+}
+
+class ReviewComment {
+  - id: int
+  - body: string
+  - path: string
+  - position: int
+  + post()
+}
+
+class QualityMetrics {
+  - avgComplexity: float
+  - issueCount: int
+  - timestamp: datetime
+  + calculate()
+  + store()
+}
+
+Repository "1" -- "*" PullRequest
+PullRequest "1" -- "*" FileChange
+FileChange "1" -- "*" Issue : generates
+Analyzer "1" -- "*" Issue : finds
+Issue "1" -- "1" ReviewComment : creates
+PullRequest "1" -- "1" QualityMetrics : has
+@enduml
