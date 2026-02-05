@@ -1,2 +1,1 @@
-# OOD-Project
-Object Oriented Design Project
+This folder consists of the requirement files of the project.
