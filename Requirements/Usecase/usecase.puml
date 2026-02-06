@@ -3,14 +3,12 @@
 skinparam backgroundColor #FFFFFF
 skinparam actorStyle awesome
 
+' Actors (outside system boundary)
+actor "Developer" as Developer
+actor "GitHub" as System
+actor "Repository Admin" as Admin
+
 rectangle "Code Review Automation Assistant System" {
-    
-    ' Primary Actors
-    actor "Developer" as Developer
-    actor "Repository Admin" as Admin
-    
-    ' Secondary Actors
-    actor "GitHub" as System
     
     ' Use Cases
     usecase "Submit Pull Request" as UC1
@@ -87,7 +85,7 @@ end note
 
 note bottom of UC4
     **Configure Rules:** 
-    Repository Admin configures and customizes 
+    Repository Admin configures & customizes 
     code review rules including which static 
     analysis checks to run, severity levels, 
     thresholds, code style guides, and quality 
