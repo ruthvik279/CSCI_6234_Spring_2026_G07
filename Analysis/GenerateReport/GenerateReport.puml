@@ -1,0 +1,17 @@
+@startuml GenerateReport
+left to right direction
+skinparam style strictuml
+
+actor Admin
+
+boundary "Report Page" as ReportUI
+control "Report Generator" as ReportGen
+entity "Analysis Report" as ReportEntity
+
+Admin --> ReportUI : request report
+ReportUI --> ReportGen : generateReport()
+ReportGen --> ReportEntity : fetchAnalysisData()
+ReportGen --> ReportUI : return report
+ReportUI --> Admin : display metrics
+
+@enduml

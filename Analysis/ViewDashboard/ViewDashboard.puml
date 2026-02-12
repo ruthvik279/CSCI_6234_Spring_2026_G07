@@ -1,0 +1,17 @@
+@startuml ViewDashboard
+left to right direction
+skinparam style strictuml
+
+actor User
+
+boundary "Dashboard Page" as DashboardUI
+control "Dashboard Controller" as DashboardCtrl
+entity "Dashboard Data" as DashData
+
+User --> DashboardUI : request dashboard
+DashboardUI --> DashboardCtrl : fetchDashboard()
+DashboardCtrl --> DashData : getMetrics()
+DashboardCtrl --> DashboardUI : return data
+DashboardUI --> User : display dashboard
+
+@enduml

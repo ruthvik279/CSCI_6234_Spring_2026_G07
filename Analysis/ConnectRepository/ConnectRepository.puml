@@ -1,0 +1,19 @@
+@startuml ConnectRepository
+left to right direction
+skinparam style strictuml
+
+actor Admin
+actor GitHub
+
+boundary "Connection Page" as ConnectUI
+control "Connection Controller" as ConnectCtrl
+entity "Configuration" as ConfigEntity
+
+Admin --> ConnectUI : setup connection
+ConnectUI --> ConnectCtrl : authenticate()
+ConnectCtrl --> GitHub : verifyToken()
+GitHub --> ConnectCtrl : return token
+ConnectCtrl --> ConfigEntity : saveConfig()
+ConnectCtrl --> ConnectUI : success
+
+@enduml

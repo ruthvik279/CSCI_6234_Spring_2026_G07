@@ -1,0 +1,19 @@
+@startuml SubmitPullRequest
+left to right direction
+skinparam style strictuml
+
+actor Developer
+actor GitHub
+
+boundary "GitHub Interface" as GitHubUI
+control "PR Handler" as PRHandler
+entity "Pull Request" as PREntity
+
+Developer --> GitHubUI : submit PR
+GitHubUI --> GitHub : webhook trigger
+GitHub --> PRHandler : receiveEvent()
+PRHandler --> PREntity : analyzeCode()
+PRHandler --> GitHub : postComments()
+GitHub --> GitHubUI : display results
+
+@enduml

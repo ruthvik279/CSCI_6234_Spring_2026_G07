@@ -1,0 +1,20 @@
+@startuml ConfigureRules
+left to right direction
+skinparam style strictuml
+
+actor Admin
+
+boundary "Rule Configuration Page" as RuleUI
+control "Rule Controller" as RuleCtrl
+entity "Code Review Rules" as RuleEntity
+
+Admin --> RuleUI : access configuration
+RuleUI --> RuleCtrl : fetchRules()
+RuleCtrl --> RuleEntity : getRules()
+RuleCtrl --> RuleUI : display rules
+Admin --> RuleUI : modify rules
+RuleUI --> RuleCtrl : saveRules()
+RuleCtrl --> RuleEntity : updateRules()
+RuleCtrl --> RuleUI : confirm
+
+@enduml

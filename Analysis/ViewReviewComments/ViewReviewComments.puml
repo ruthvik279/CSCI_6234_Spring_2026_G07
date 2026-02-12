@@ -1,0 +1,17 @@
+@startuml ViewReviewComments
+left to right direction
+skinparam style strictuml
+
+actor Developer
+
+boundary "Review Comments Page" as ReviewUI
+control "Review Controller" as ReviewCtrl
+entity "Review Comments" as CommentData
+
+Developer --> ReviewUI : view comments
+ReviewUI --> ReviewCtrl : fetchComments()
+ReviewCtrl --> CommentData : getReviewData()
+ReviewCtrl --> ReviewUI : return comments
+ReviewUI --> Developer : display feedback
+
+@enduml
