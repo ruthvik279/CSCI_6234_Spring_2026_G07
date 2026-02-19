@@ -128,4 +128,19 @@ Issue "0..1" -- "0..*" ReviewComment : discussedIn
 
 PullRequest "1" -- "1" QualityMetrics : has
 
+note top of User
+  Code Review Automation Assistant - Domain Model
+  
+  The domain model represents the core business entities and relationships 
+  for an automated code review system integrated with GitHub repositories.
+  
+  Developers submit pull requests while RepositoryAdmins manage repositories 
+  and configure code review rules. A Repository contains pull requests and 
+  defines applicable rules. Each PullRequest comprises file changes that are 
+  the source of detected Issues, which are categorized as StyleIssue, 
+  ComplexityIssue, SecurityIssue, or BugIssue. CodeReviewRules define 
+  automation standards while QualityMetrics capture analysis results for 
+  each pull request.
+end note
+
 @enduml
