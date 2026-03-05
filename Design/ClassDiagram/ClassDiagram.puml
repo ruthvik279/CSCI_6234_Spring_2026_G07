@@ -1,0 +1,154 @@
+@startuml
+title Class Diagram - Code Review Automation Assistant
+skinparam style strictuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 120
+skinparam ranksep 80
+
+' =========================
+' ENTITY CLASSES
+' =========================
+
+abstract class User {
+  userID : String
+  username : String
+  email : String
+
+  +login() : void
+  +logout() : void
+}
+
+class Developer {
+  pullRequestsSubmitted : Integer
+
+  +submitPullRequest(repoID : String, branchName : String) : PullRequest
+  +viewReviewComments(pullRequestID : String) : List<ReviewComment>
+}
+
+class RepositoryAdmin {
+  repositoriesManaged : Integer
+
+  +connectRepository(githubUrl : String, accessToken : String) : Repository
+  +configureRules(repositoryID : String, rules : List<CodeReviewRule>) : void
+}
+
+class Repository {
+  repositoryID : String
+  name : String
+  githubUrl : String
+  isActive : Boolean
+
+  +connect(accessToken : String) : void
+  +disconnect() : void
+}
+
+class PullRequest {
+  pullRequestID : String
+  title : String
+  status : String
+  createdDate : DateTime
+
+  +fetchChanges() : List<FileChange>
+  +updateStatus(status : String) : void
+}
+
+class FileChange {
+  filename : String
+  additions : Integer
+  deletions : Integer
+
+  +parseCode() : String
+}
+
+abstract class Issue {
+  issueID : String
+  lineNumber : Integer
+  severity : String
+  message : String
+
+  +format() : String
+  +getSuggestion() : String
+}
+
+class StyleIssue {
+  violatedRule : String
+
+  +checkStyle() : void
+}
+
+class ComplexityIssue {
+  complexityScore : Float
+
+  +calculateComplexity() : Float
+}
+
+class SecurityIssue {
+  vulnerabilityPattern : String
+
+  +detectVulnerability() : void
+}
+
+class BugIssue {
+  bugCategory : String
+
+  +detectBug() : void
+}
+
+class ReviewComment {
+  commentID : String
+  body : String
+  lineNumber : Integer
+  isViewed : Boolean
+
+  +post() : void
+  +markViewed() : void
+}
+
+class CodeReviewRule {
+  ruleID : String
+  name : String
+  severity : String
+  isEnabled : Boolean
+
+  +enable() : void
+  +disable() : void
+}
+
+class QualityMetrics {
+  timestamp : DateTime
+  totalIssuesCount : Integer
+  codeQualityScore : Float
+
+  +calculate(issues : List<Issue>) : Float
+  +store() : void
+}
+
+' =========================
+' INHERITANCE
+' =========================
+
+User <|-- Developer
+User <|-- RepositoryAdmin
+
+Issue <|-- StyleIssue
+Issue <|-- ComplexityIssue
+Issue <|-- SecurityIssue
+Issue <|-- BugIssue
+
+' =========================
+' ASSOCIATIONS
+' =========================
+
+Developer        "1"    --  "0..*"  PullRequest     : submits
+RepositoryAdmin  "1"    --  "0..*"  Repository      : manages
+Repository       "1"    --  "0..*"  PullRequest     : contains
+RepositoryAdmin  "1"    --  "0..*"  CodeReviewRule  : configures
+Repository       "1"    --  "0..*"  CodeReviewRule  : defines
+PullRequest      "1"    --  "1..*"  FileChange      : includes
+FileChange       "1"    --  "0..*"  Issue           : produces
+PullRequest      "1"    --  "0..*"  ReviewComment   : receives
+Issue            "0..1" --  "0..*"  ReviewComment   : discussedIn
+PullRequest      "1"    --  "1"     QualityMetrics  : has
+
+@enduml

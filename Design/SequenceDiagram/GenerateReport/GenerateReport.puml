@@ -1,0 +1,25 @@
+@startuml
+title UC6 - Generate Report
+skinparam style strictuml
+
+actor Admin
+
+boundary "Report Page" as ReportUI
+control "Report Generator" as ReportGen
+entity "QualityMetrics" as QualityMetrics
+entity "PullRequest" as PullRequest
+entity "Issue" as Issue
+
+Admin -> ReportUI : submitReportParameters(dateRange, repositoryID, reportType)
+ReportUI -> ReportGen : generateReport(dateRange, repositoryID, reportType)
+ReportGen -> PullRequest : getPullRequests(repositoryID, dateRange)
+ReportGen -> QualityMetrics : fetchAnalysisData(repositoryID, dateRange)
+ReportGen -> Issue : getIssueStatistics(repositoryID, dateRange)
+ReportGen -> ReportUI : returnReport(reportDocument)
+ReportUI -> Admin : displayReportPreview(reportDocument)
+Admin -> ReportUI : selectExportFormat(format)
+ReportUI -> ReportGen : exportReport(reportDocument, format)
+ReportGen -> ReportUI : returnExportedFile(exportedFile)
+ReportUI -> Admin : provideDownload(exportedFile)
+
+@enduml

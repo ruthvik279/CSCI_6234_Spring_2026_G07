@@ -1,0 +1,28 @@
+@startuml
+title UC1 - Submit Pull Request
+skinparam style strictuml
+
+actor Developer
+actor GitHub
+
+boundary "GitHub Interface" as GitHubUI
+control "PR Handler" as PRHandler
+entity "PullRequest" as PullRequest
+entity "FileChange" as FileChange
+entity "Issue" as Issue
+entity "ReviewComment" as ReviewComment
+entity "QualityMetrics" as QualityMetrics
+
+Developer -> GitHubUI : submitPullRequest(branchName, title)
+GitHubUI -> GitHub : createPR(repoID, branchName, title)
+GitHub -> PRHandler : receiveWebhookEvent(payload)
+PRHandler -> PullRequest : createPullRequest(prData)
+PRHandler -> FileChange : fetchFileChanges(pullRequestID)
+PRHandler -> Issue : analyzeCode(fileChanges[])
+PRHandler -> ReviewComment : generateReviewComments(issues[])
+PRHandler -> GitHub : postComments(pullRequestID, comments[])
+PRHandler -> QualityMetrics : updateQualityMetrics(pullRequestID, issues[])
+PRHandler -> Developer : sendNotification(pullRequestID, reviewSummary)
+GitHub -> GitHubUI : displayReviewComments(comments[])
+
+@enduml

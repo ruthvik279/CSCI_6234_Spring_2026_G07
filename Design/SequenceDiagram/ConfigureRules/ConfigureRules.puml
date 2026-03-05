@@ -1,0 +1,25 @@
+@startuml
+title UC5 - Configure Rules
+skinparam style strictuml
+
+actor Admin
+
+boundary "Rule Configuration Page" as RuleUI
+control "Rule Controller" as RuleCtrl
+entity "CodeReviewRule" as CodeReviewRule
+entity "Repository" as Repository
+
+Admin -> RuleUI : accessConfigurationPage()
+RuleUI -> RuleCtrl : fetchRules(repositoryID)
+RuleCtrl -> Repository : getRepository(repositoryID)
+RuleCtrl -> CodeReviewRule : getRules(repositoryID)
+RuleCtrl -> RuleUI : displayRules(rules[])
+RuleUI -> Admin : showCurrentRuleSettings(rules[])
+Admin -> RuleUI : modifyRules(ruleID, isEnabled, severity, threshold)
+RuleUI -> RuleCtrl : saveRules(repositoryID, updatedRules)
+RuleCtrl -> CodeReviewRule : updateRules(repositoryID, updatedRules)
+RuleCtrl -> Repository : updateActiveRuleSet(repositoryID, updatedRules)
+RuleCtrl -> RuleUI : confirmUpdate(message)
+RuleUI -> Admin : displaySuccessMessage()
+
+@enduml

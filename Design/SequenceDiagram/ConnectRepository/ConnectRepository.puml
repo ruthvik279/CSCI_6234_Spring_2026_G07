@@ -1,0 +1,23 @@
+@startuml
+title UC4 - Connect Repository
+skinparam style strictuml
+
+actor Admin
+actor GitHub
+
+boundary "Connection Page" as ConnectUI
+control "Connection Controller" as ConnectCtrl
+entity "Repository" as Repository
+
+Admin -> ConnectUI : submitConnection(githubUrl, accessToken)
+ConnectUI -> ConnectCtrl : validateInput(githubUrl, accessToken)
+ConnectCtrl -> GitHub : verifyToken(accessToken)
+GitHub -> ConnectCtrl : returnAuthResult(authToken)
+ConnectCtrl -> GitHub : createWebhook(repositoryID, webhookUrl)
+GitHub -> ConnectCtrl : returnWebhookStatus(webhookUrl)
+ConnectCtrl -> Repository : saveRepository(repositoryID, githubUrl, webhookUrl)
+ConnectCtrl -> Repository : enableAutomatedScanning(repositoryID)
+ConnectCtrl -> ConnectUI : confirmSuccess(message)
+ConnectUI -> Admin : displaySuccessMessage(message)
+
+@enduml

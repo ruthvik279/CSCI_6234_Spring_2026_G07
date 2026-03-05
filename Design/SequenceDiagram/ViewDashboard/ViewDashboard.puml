@@ -1,0 +1,26 @@
+@startuml
+title UC3 - View Dashboard
+skinparam style strictuml
+
+actor User
+
+boundary "Dashboard Page" as DashboardUI
+control "Dashboard Controller" as DashboardCtrl
+entity "Repository" as Repository
+entity "PullRequest" as PullRequest
+entity "QualityMetrics" as QualityMetrics
+
+User -> DashboardUI : openDashboard()
+DashboardUI -> DashboardCtrl : fetchDashboard(userID)
+DashboardCtrl -> Repository : getRepositories(userID)
+DashboardCtrl -> PullRequest : getPullRequests(repositoryID)
+DashboardCtrl -> QualityMetrics : getMetrics(repositoryID)
+DashboardCtrl -> DashboardUI : returnDashboardData(dashboardData)
+DashboardUI -> User : displayDashboard(dashboardData)
+User -> DashboardUI : applyFilter(filterCriteria)
+DashboardUI -> DashboardCtrl : filterDashboard(filterCriteria)
+DashboardCtrl -> QualityMetrics : getFilteredMetrics(filterCriteria)
+DashboardCtrl -> DashboardUI : returnFilteredData(filteredData)
+DashboardUI -> User : displayFilteredDashboard(filteredData)
+
+@enduml

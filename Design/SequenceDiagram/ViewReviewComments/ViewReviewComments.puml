@@ -1,0 +1,29 @@
+@startuml
+title UC2 - View Review Comments
+skinparam style strictuml
+
+actor Developer
+
+boundary "Review Comments Page" as ReviewUI
+control "Review Controller" as ReviewCtrl
+entity "PullRequest" as PullRequest
+entity "ReviewComment" as ReviewComment
+entity "Issue" as Issue
+
+Developer -> ReviewUI : openPullRequestPage(pullRequestID)
+ReviewUI -> ReviewCtrl : fetchComments(pullRequestID)
+ReviewCtrl -> PullRequest : getPullRequest(pullRequestID)
+ReviewCtrl -> ReviewComment : getReviewComments(pullRequestID)
+ReviewCtrl -> Issue : getIssues(pullRequestID)
+ReviewCtrl -> ReviewUI : returnComments(comments[])
+ReviewUI -> Developer : displayCommentsWithContext(comments[])
+Developer -> ReviewUI : applyFilter(filterCriteria)
+ReviewUI -> ReviewCtrl : filterComments(filterCriteria)
+ReviewCtrl -> ReviewComment : getFilteredComments(filterCriteria)
+ReviewCtrl -> ReviewUI : returnFilteredComments(comments[])
+ReviewUI -> Developer : displayFilteredComments(comments[])
+Developer -> ReviewUI : markAsViewed(commentID)
+ReviewUI -> ReviewCtrl : updateCommentStatus(commentID)
+ReviewCtrl -> ReviewComment : markViewed(commentID)
+
+@enduml
