@@ -1,0 +1,76 @@
+:root {
+  font-family: "Segoe UI", sans-serif;
+  color: #132238;
+  background:
+    radial-gradient(circle at top left, rgba(255, 200, 160, 0.55), transparent 35%),
+    linear-gradient(135deg, #f7f3ea, #dae7f2 60%, #c7d8de);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 72px;
+}
+
+.hero {
+  padding: 32px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 20px 60px rgba(19, 34, 56, 0.12);
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #a44f1e;
+}
+
+.hero h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1;
+}
+
+.lede {
+  max-width: 60ch;
+  font-size: 1.05rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.card,
+.status-panel {
+  padding: 24px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 40px rgba(19, 34, 56, 0.1);
+}
+
+.card h2,
+.status-panel h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.card strong {
+  font-size: 2.5rem;
+}
+
+.status-panel {
+  margin-top: 24px;
+}
