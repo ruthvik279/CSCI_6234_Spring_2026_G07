@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  analyzePullRequest,
-  createRepository,
-  fetchDashboard,
-  listPullRequests,
-  submitPullRequest,
-} from "./api";
+import { analyzePullRequest, createRepository, fetchDashboard, listPullRequests } from "./api";
 
 const fallbackMetrics = {
   repository_count: 0,
@@ -20,24 +14,10 @@ const initialRepositoryForm = {
   access_token: "demo-token",
 };
 
-const initialPullRequestForm = {
-  number: 2,
-  title: "Improve validation flow",
-  description: "Frontend-triggered demo pull request",
-  status: "open",
-  filename: "validator.py",
-  filepath: "src/validator.py",
-  additions: 12,
-  deletions: 1,
-  change_type: "modified",
-  patch: "password = 'temp-secret'\nif user:\n    print('valid')\n",
-};
-
 export default function App() {
   const [metrics, setMetrics] = useState(fallbackMetrics);
   const [status, setStatus] = useState("loading");
   const [repositoryForm, setRepositoryForm] = useState(initialRepositoryForm);
-  const [pullRequestForm, setPullRequestForm] = useState(initialPullRequestForm);
   const [activeRepository, setActiveRepository] = useState(null);
   const [pullRequests, setPullRequests] = useState([]);
   const [lastRun, setLastRun] = useState(null);
@@ -75,11 +55,6 @@ export default function App() {
   function updateRepositoryField(event) {
     const { name, value } = event.target;
     setRepositoryForm((current) => ({ ...current, [name]: value }));
-  }
-
-  function updatePullRequestField(event) {
-    const { name, value } = event.target;
-    setPullRequestForm((current) => ({ ...current, [name]: value }));
   }
 
   async function handleRepositorySubmit(event) {
@@ -135,44 +110,6 @@ export default function App() {
       const result = await analyzePullRequest(activeRepository.repository_id, pullRequestNumber);
       setLastRun(result);
       setMessage(`Analyzed GitHub pull request #${pullRequestNumber}.`);
-      await refreshDashboard();
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setBusyAction("");
-    }
-  }
-
-  async function handlePullRequestSubmit(event) {
-    event.preventDefault();
-    if (!activeRepository?.repository_id) {
-      setMessage("Create a repository first so the pull request has a target.");
-      return;
-    }
-
-    setBusyAction("pull-request");
-    setMessage("");
-
-    try {
-      const result = await submitPullRequest({
-        repository_id: activeRepository.repository_id,
-        number: Number(pullRequestForm.number),
-        title: pullRequestForm.title,
-        description: pullRequestForm.description,
-        status: pullRequestForm.status,
-        files: [
-          {
-            filename: pullRequestForm.filename,
-            filepath: pullRequestForm.filepath,
-            additions: Number(pullRequestForm.additions),
-            deletions: Number(pullRequestForm.deletions),
-            change_type: pullRequestForm.change_type,
-            patch: pullRequestForm.patch,
-          },
-        ],
-      });
-      setLastRun(result);
-      setMessage(`Pull request #${pullRequestForm.number} analyzed successfully.`);
       await refreshDashboard();
     } catch (error) {
       setMessage(error.message);
@@ -333,107 +270,6 @@ export default function App() {
           )}
         </article>
 
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Fallback</p>
-              <h2>Manual PR Simulation</h2>
-            </div>
-          </div>
-
-          <form className="form" onSubmit={handlePullRequestSubmit}>
-            <label>
-              PR Number
-              <input
-                name="number"
-                type="number"
-                value={pullRequestForm.number}
-                onChange={updatePullRequestField}
-                required
-              />
-            </label>
-            <label>
-              Title
-              <input
-                name="title"
-                value={pullRequestForm.title}
-                onChange={updatePullRequestField}
-                required
-              />
-            </label>
-            <label>
-              Description
-              <textarea
-                name="description"
-                rows="3"
-                value={pullRequestForm.description}
-                onChange={updatePullRequestField}
-              />
-            </label>
-            <label>
-              Filename
-              <input
-                name="filename"
-                value={pullRequestForm.filename}
-                onChange={updatePullRequestField}
-                required
-              />
-            </label>
-            <label>
-              File Path
-              <input
-                name="filepath"
-                value={pullRequestForm.filepath}
-                onChange={updatePullRequestField}
-                required
-              />
-            </label>
-            <div className="inline-grid">
-              <label>
-                Additions
-                <input
-                  name="additions"
-                  type="number"
-                  value={pullRequestForm.additions}
-                  onChange={updatePullRequestField}
-                  required
-                />
-              </label>
-              <label>
-                Deletions
-                <input
-                  name="deletions"
-                  type="number"
-                  value={pullRequestForm.deletions}
-                  onChange={updatePullRequestField}
-                  required
-                />
-              </label>
-            </div>
-            <label>
-              Change Type
-              <input
-                name="change_type"
-                value={pullRequestForm.change_type}
-                onChange={updatePullRequestField}
-                required
-              />
-            </label>
-            <label>
-              Patch Content
-              <textarea
-                name="patch"
-                rows="8"
-                value={pullRequestForm.patch}
-                onChange={updatePullRequestField}
-                required
-              />
-            </label>
-            <button type="submit" disabled={busyAction === "pull-request"}>
-              {busyAction === "pull-request" ? "Analyzing..." : "Analyze Pull Request"}
-            </button>
-          </form>
-        </article>
       </section>
 
       <section className="workspace">
