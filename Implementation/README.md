@@ -55,6 +55,16 @@ npm install
 npm run dev
 ```
 
+## Easy Startup On Windows
+
+Use these scripts from the `Implementation` folder:
+
+- `start-app.cmd` starts backend and frontend in separate terminal windows
+- `run-backend.cmd` starts only the FastAPI backend on `http://127.0.0.1:8000`
+- `run-frontend.cmd` starts only the Vite frontend on `http://127.0.0.1:5173`
+
+The scripts also install missing local dependencies the first time you run them.
+
 ## Next Steps
 
 - replace the in-memory store with a database

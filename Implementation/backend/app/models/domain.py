@@ -11,6 +11,9 @@ class Repository:
     name: str
     github_url: str
     webhook_url: str
+    owner: str = ""
+    repo_name: str = ""
+    access_token: str = ""
     is_active: bool = True
 
 

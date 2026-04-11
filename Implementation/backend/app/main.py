@@ -1,16 +1,27 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.models.domain import CodeReviewRule
-from app.schemas.api import DashboardResponse, PullRequestWebhookPayload, ReportResponse, RepositoryCreate, RuleUpdateRequest
+from app.schemas.api import DashboardResponse, GitHubPullRequestListResponse, PullRequestWebhookPayload, ReportResponse, RepositoryCreate, RuleUpdateRequest
 from app.services.github_service import GitHubService
 from app.services.report_service import ReportService
 from app.services.review_service import ReviewService
 from app.store.memory import store
 
 app = FastAPI(title=settings.app_name)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 github_service = GitHubService()
 review_service = ReviewService()
@@ -24,18 +35,53 @@ def health() -> dict[str, str]:
 
 @app.post("/repositories")
 def connect_repository(request: RepositoryCreate) -> dict:
-    repository = github_service.connect_repository(
-        name=request.name,
-        github_url=request.github_url,
-        access_token=request.access_token,
-    )
+    try:
+        repository = github_service.connect_repository(
+            name=request.name,
+            github_url=request.github_url,
+            access_token=request.access_token,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     return {
         "repository_id": repository.repository_id,
         "name": repository.name,
         "github_url": repository.github_url,
         "webhook_url": repository.webhook_url,
+        "owner": repository.owner,
+        "repo_name": repository.repo_name,
         "rules": store.rules[repository.repository_id],
     }
+
+
+@app.get("/repositories/{repository_id}/pull-requests", response_model=GitHubPullRequestListResponse)
+def list_pull_requests(repository_id: str) -> GitHubPullRequestListResponse:
+    if repository_id not in store.repositories:
+        raise HTTPException(status_code=404, detail="Repository not found.")
+    try:
+        pull_requests = github_service.list_pull_requests(repository_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return GitHubPullRequestListResponse(
+        repository_id=repository_id,
+        pull_requests=pull_requests,
+    )
+
+
+@app.post("/repositories/{repository_id}/pull-requests/{pull_request_number}/analyze")
+def analyze_github_pull_request(repository_id: str, pull_request_number: int) -> dict:
+    if repository_id not in store.repositories:
+        raise HTTPException(status_code=404, detail="Repository not found.")
+    try:
+        pull_request = github_service.fetch_pull_request_details(repository_id, pull_request_number)
+        if not pull_request["files"]:
+            raise HTTPException(
+                status_code=400,
+                detail="GitHub did not return any text patches for this pull request.",
+            )
+        return review_service.process_github_pull_request(repository_id, pull_request)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.post("/rules")

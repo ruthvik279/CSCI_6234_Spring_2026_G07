@@ -21,27 +21,69 @@ class ReviewService:
         ]
 
     def process_pull_request(self, payload: PullRequestWebhookPayload) -> dict:
-        pull_request = PullRequest(
-            pull_request_id=str(uuid4()),
+        files = [
+            FileChange(
+                file_change_id=str(uuid4()),
+                filename=file.filename,
+                filepath=file.filepath,
+                additions=file.additions,
+                deletions=file.deletions,
+                change_type=file.change_type,
+                patch=file.patch,
+            )
+            for file in payload.files
+        ]
+        return self._process_files(
             repository_id=payload.repository_id,
             number=payload.number,
             title=payload.title,
             description=payload.description,
             status=payload.status,
+            files=files,
+        )
+
+    def process_github_pull_request(self, repository_id: str, github_pull_request: dict) -> dict:
+        files = [
+            FileChange(
+                file_change_id=str(uuid4()),
+                filename=file["filename"],
+                filepath=file["filepath"],
+                additions=file["additions"],
+                deletions=file["deletions"],
+                change_type=file["change_type"],
+                patch=file["patch"],
+            )
+            for file in github_pull_request["files"]
+        ]
+        return self._process_files(
+            repository_id=repository_id,
+            number=github_pull_request["number"],
+            title=github_pull_request["title"],
+            description=github_pull_request["description"],
+            status=github_pull_request["status"],
+            files=files,
+        )
+
+    def _process_files(
+        self,
+        *,
+        repository_id: str,
+        number: int,
+        title: str,
+        description: str,
+        status: str,
+        files: list[FileChange],
+    ) -> dict:
+        pull_request = PullRequest(
+            pull_request_id=str(uuid4()),
+            repository_id=repository_id,
+            number=number,
+            title=title,
+            description=description,
+            status=status,
             created_date=datetime.utcnow(),
             updated_date=datetime.utcnow(),
-            files=[
-                FileChange(
-                    file_change_id=str(uuid4()),
-                    filename=file.filename,
-                    filepath=file.filepath,
-                    additions=file.additions,
-                    deletions=file.deletions,
-                    change_type=file.change_type,
-                    patch=file.patch,
-                )
-                for file in payload.files
-            ],
+            files=files,
         )
         store.pull_requests[pull_request.pull_request_id] = pull_request
 

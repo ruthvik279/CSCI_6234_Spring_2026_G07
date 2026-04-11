@@ -40,6 +40,19 @@ class RuleUpdateRequest(BaseModel):
     rules: List[RulePayload]
 
 
+class GitHubPullRequestSummary(BaseModel):
+    number: int
+    title: str
+    state: str
+    author: str
+    html_url: str
+
+
+class GitHubPullRequestListResponse(BaseModel):
+    repository_id: str
+    pull_requests: List[GitHubPullRequestSummary]
+
+
 class DashboardResponse(BaseModel):
     repository_count: int
     pull_request_count: int
