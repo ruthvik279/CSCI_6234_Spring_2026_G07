@@ -221,7 +221,7 @@ export default function App() {
               <p className="eyebrow">Step 2</p>
               <h2>Analyze Real GitHub Pull Requests</h2>
             </div>
-            <span className="badge subtle">
+            <span className="badge">
               {lastRun ? `${lastRun.issues_found} issues found` : "No run yet"}
             </span>
           </div>

@@ -104,6 +104,7 @@ body {
   background: #132238;
   color: #fff;
   font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 .badge.subtle {
