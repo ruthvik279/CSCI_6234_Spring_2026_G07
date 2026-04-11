@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
-import { analyzePullRequest, createRepository, fetchDashboard, listPullRequests } from "./api";
+import {
+  analyzePullRequest,
+  createRepository,
+  fetchAnalysisHistory,
+  fetchDashboard,
+  fetchReport,
+  fetchRules,
+  getReportDownloadUrl,
+  listPullRequests,
+  listRepositories,
+  updateRules,
+} from "./api";
 
 const fallbackMetrics = {
   repository_count: 0,
@@ -19,7 +30,11 @@ export default function App() {
   const [status, setStatus] = useState("loading");
   const [repositoryForm, setRepositoryForm] = useState(initialRepositoryForm);
   const [activeRepository, setActiveRepository] = useState(null);
+  const [knownRepositories, setKnownRepositories] = useState([]);
   const [pullRequests, setPullRequests] = useState([]);
+  const [rules, setRules] = useState([]);
+  const [report, setReport] = useState(null);
+  const [history, setHistory] = useState([]);
   const [lastRun, setLastRun] = useState(null);
   const [message, setMessage] = useState("");
   const [busyAction, setBusyAction] = useState("");
@@ -52,9 +67,52 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    listRepositories()
+      .then((data) => {
+        setKnownRepositories(data.repositories);
+        if (data.repositories.length && !activeRepository) {
+          setActiveRepository(data.repositories[0]);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!activeRepository?.repository_id) {
+      return;
+    }
+    loadRepositoryWorkspace(activeRepository.repository_id);
+  }, [activeRepository?.repository_id]);
+
   function updateRepositoryField(event) {
     const { name, value } = event.target;
     setRepositoryForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function updateRule(index, field, value) {
+    setRules((current) =>
+      current.map((rule, ruleIndex) =>
+        ruleIndex === index ? { ...rule, [field]: value } : rule
+      )
+    );
+  }
+
+  async function loadRepositoryWorkspace(repositoryId) {
+    try {
+      const [rulesData, reportData, historyData, pullRequestData] = await Promise.all([
+        fetchRules(repositoryId),
+        fetchReport(repositoryId),
+        fetchAnalysisHistory(repositoryId),
+        listPullRequests(repositoryId).catch(() => ({ pull_requests: [] })),
+      ]);
+      setRules(rulesData.rules);
+      setReport(reportData);
+      setHistory(historyData.history);
+      setPullRequests(pullRequestData.pull_requests);
+    } catch (error) {
+      setMessage(error.message);
+    }
   }
 
   async function handleRepositorySubmit(event) {
@@ -65,10 +123,11 @@ export default function App() {
     try {
       const repository = await createRepository(repositoryForm);
       setActiveRepository(repository);
-      const pullRequestData = await listPullRequests(repository.repository_id);
-      setPullRequests(pullRequestData.pull_requests);
+      const repositoriesData = await listRepositories();
+      setKnownRepositories(repositoriesData.repositories);
+      await loadRepositoryWorkspace(repository.repository_id);
       setMessage(
-        `Connected ${repository.owner}/${repository.repo_name}. Loaded ${pullRequestData.pull_requests.length} open pull requests.`
+        `Connected ${repository.owner}/${repository.repo_name}. Repository workspace is ready.`
       );
       await refreshDashboard();
     } catch (error) {
@@ -109,8 +168,57 @@ export default function App() {
     try {
       const result = await analyzePullRequest(activeRepository.repository_id, pullRequestNumber);
       setLastRun(result);
+      await loadRepositoryWorkspace(activeRepository.repository_id);
       setMessage(`Analyzed GitHub pull request #${pullRequestNumber}.`);
       await refreshDashboard();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusyAction("");
+    }
+  }
+
+  async function handleRulesSave(event) {
+    event.preventDefault();
+    if (!activeRepository?.repository_id) {
+      setMessage("Connect a GitHub repository first.");
+      return;
+    }
+
+    setBusyAction("save-rules");
+    setMessage("");
+    try {
+      const result = await updateRules({
+        repository_id: activeRepository.repository_id,
+        rules: rules.map((rule) => ({
+          name: rule.name,
+          severity: rule.severity,
+          is_enabled: rule.is_enabled,
+          threshold: rule.threshold === "" || rule.threshold === null ? null : Number(rule.threshold),
+        })),
+      });
+      setRules(result.rules);
+      setMessage("Rules updated successfully.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusyAction("");
+    }
+  }
+
+  async function handleReportRefresh() {
+    if (!activeRepository?.repository_id) {
+      setMessage("Connect a GitHub repository first.");
+      return;
+    }
+    setBusyAction("refresh-report");
+    setMessage("");
+    try {
+      const reportData = await fetchReport(activeRepository.repository_id);
+      setReport(reportData);
+      const historyData = await fetchAnalysisHistory(activeRepository.repository_id);
+      setHistory(historyData.history);
+      setMessage("Report refreshed.");
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -276,6 +384,40 @@ export default function App() {
         <article className="panel">
           <div className="panel-heading">
             <div>
+              <p className="eyebrow">Repositories</p>
+              <h2>Connected Repository History</h2>
+            </div>
+            <span className="badge subtle">{knownRepositories.length} tracked</span>
+          </div>
+
+          {knownRepositories.length ? (
+            <div className="results-stack">
+              {knownRepositories.map((repository) => (
+                <button
+                  type="button"
+                  className={`repo-card ${
+                    activeRepository?.repository_id === repository.repository_id ? "repo-card-active" : ""
+                  }`}
+                  key={repository.repository_id}
+                  onClick={() => setActiveRepository(repository)}
+                >
+                  <strong>{repository.name}</strong>
+                  <span className="muted">
+                    {repository.owner}/{repository.repo_name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="result-box empty-state">
+              <p>No repositories have been connected yet.</p>
+            </div>
+          )}
+        </article>
+
+        <article className="panel">
+          <div className="panel-heading">
+            <div>
               <p className="eyebrow">Results</p>
               <h2>Latest Review Output</h2>
             </div>
@@ -310,6 +452,152 @@ export default function App() {
           ) : (
             <div className="result-box empty-state">
               <p>No pull request analysis has been run from the UI yet.</p>
+            </div>
+          )}
+        </article>
+      </section>
+
+      <section className="workspace">
+        <article className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Use Case</p>
+              <h2>Configure Rules</h2>
+            </div>
+          </div>
+
+          {activeRepository ? (
+            <form className="form" onSubmit={handleRulesSave}>
+              {rules.map((rule, index) => (
+                <div className="rule-row" key={rule.rule_id || `${rule.name}-${index}`}>
+                  <div className="rule-row-header">
+                    <strong>{rule.name}</strong>
+                    <label className="toggle">
+                      <input
+                        type="checkbox"
+                        checked={rule.is_enabled}
+                        onChange={(event) => updateRule(index, "is_enabled", event.target.checked)}
+                      />
+                      Enabled
+                    </label>
+                  </div>
+                  <div className="inline-grid">
+                    <label>
+                      Severity
+                      <select
+                        value={rule.severity}
+                        onChange={(event) => updateRule(index, "severity", event.target.value)}
+                      >
+                        <option value="low">low</option>
+                        <option value="medium">medium</option>
+                        <option value="high">high</option>
+                      </select>
+                    </label>
+                    <label>
+                      Threshold
+                      <input
+                        type="number"
+                        value={rule.threshold ?? ""}
+                        onChange={(event) => updateRule(index, "threshold", event.target.value)}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+              <button type="submit" disabled={busyAction === "save-rules"}>
+                {busyAction === "save-rules" ? "Saving..." : "Save Rules"}
+              </button>
+            </form>
+          ) : (
+            <div className="result-box empty-state">
+              <p>Connect a repository to configure its rules.</p>
+            </div>
+          )}
+        </article>
+
+        <article className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Use Case</p>
+              <h2>Generate Report</h2>
+            </div>
+            <div className="button-row">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={handleReportRefresh}
+                disabled={!activeRepository || busyAction === "refresh-report"}
+              >
+                {busyAction === "refresh-report" ? "Refreshing..." : "Refresh Report"}
+              </button>
+              {activeRepository ? (
+                <a
+                  className="secondary-button link-button"
+                  href={getReportDownloadUrl(activeRepository.repository_id)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Download CSV
+                </a>
+              ) : null}
+            </div>
+          </div>
+
+          {report ? (
+            <div className="results-stack">
+              <div className="result-box">
+                <h3>Repository Summary</h3>
+                <p>Pull requests analyzed: {report.pull_request_count}</p>
+                <p>Total issues found: {report.total_issue_count}</p>
+                <p>Average quality score: {report.average_quality_score}</p>
+              </div>
+              <div className="result-box">
+                <h3>Issues By Severity</h3>
+                <p className="muted">
+                  {Object.keys(report.issues_by_severity).length
+                    ? Object.entries(report.issues_by_severity)
+                        .map(([severity, count]) => `${severity} ${count}`)
+                        .join(", ")
+                    : "No issues recorded yet."}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="result-box empty-state">
+              <p>No report data is available for the selected repository yet.</p>
+            </div>
+          )}
+        </article>
+      </section>
+
+      <section className="workspace">
+        <article className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">History</p>
+              <h2>Analyzed Pull Request History</h2>
+            </div>
+            <span className="badge subtle">{history.length} analyzed</span>
+          </div>
+
+          {history.length ? (
+            <div className="results-stack">
+              {history.map((entry) => (
+                <article className="comment-card" key={entry.pull_request_id}>
+                  <p className="comment-path">PR #{entry.number}</p>
+                  <h3>{entry.title}</h3>
+                  <p className="muted">
+                    status: {entry.status} | issues: {entry.issue_count} | comments: {entry.comment_count}
+                  </p>
+                  <p className="muted">
+                    quality score: {entry.quality_score} | avg complexity: {entry.avg_complexity}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="result-box empty-state">
+              <p>No analyzed pull requests recorded yet.</p>
             </div>
           )}
         </article>

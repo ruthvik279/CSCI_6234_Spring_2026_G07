@@ -1,11 +1,23 @@
 from __future__ import annotations
 
+from io import StringIO
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from app.config import settings
 from app.models.domain import CodeReviewRule
-from app.schemas.api import DashboardResponse, GitHubPullRequestListResponse, PullRequestWebhookPayload, ReportResponse, RepositoryCreate, RuleUpdateRequest
+from app.schemas.api import (
+    AnalysisHistoryResponse,
+    DashboardResponse,
+    GitHubPullRequestListResponse,
+    PullRequestWebhookPayload,
+    ReportResponse,
+    RepositoryCreate,
+    RepositoryListResponse,
+    RuleUpdateRequest,
+)
 from app.services.github_service import GitHubService
 from app.services.report_service import ReportService
 from app.services.review_service import ReviewService
@@ -33,6 +45,22 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/repositories", response_model=RepositoryListResponse)
+def list_repositories() -> RepositoryListResponse:
+    return RepositoryListResponse(
+        repositories=[
+            {
+                "repository_id": repository.repository_id,
+                "name": repository.name,
+                "github_url": repository.github_url,
+                "owner": repository.owner,
+                "repo_name": repository.repo_name,
+            }
+            for repository in store.repositories.values()
+        ]
+    )
+
+
 @app.post("/repositories")
 def connect_repository(request: RepositoryCreate) -> dict:
     try:
@@ -54,6 +82,22 @@ def connect_repository(request: RepositoryCreate) -> dict:
     }
 
 
+@app.get("/repositories/{repository_id}")
+def get_repository(repository_id: str) -> dict:
+    repository = store.repositories.get(repository_id)
+    if not repository:
+        raise HTTPException(status_code=404, detail="Repository not found.")
+    return {
+        "repository_id": repository.repository_id,
+        "name": repository.name,
+        "github_url": repository.github_url,
+        "owner": repository.owner,
+        "repo_name": repository.repo_name,
+        "webhook_url": repository.webhook_url,
+        "rules": store.rules[repository_id],
+    }
+
+
 @app.get("/repositories/{repository_id}/pull-requests", response_model=GitHubPullRequestListResponse)
 def list_pull_requests(repository_id: str) -> GitHubPullRequestListResponse:
     if repository_id not in store.repositories:
@@ -66,6 +110,42 @@ def list_pull_requests(repository_id: str) -> GitHubPullRequestListResponse:
         repository_id=repository_id,
         pull_requests=pull_requests,
     )
+
+
+@app.get("/repositories/{repository_id}/rules")
+def get_rules(repository_id: str) -> dict:
+    if repository_id not in store.repositories:
+        raise HTTPException(status_code=404, detail="Repository not found.")
+    return {"repository_id": repository_id, "rules": store.rules[repository_id]}
+
+
+@app.get("/repositories/{repository_id}/history", response_model=AnalysisHistoryResponse)
+def get_analysis_history(repository_id: str) -> AnalysisHistoryResponse:
+    if repository_id not in store.repositories:
+        raise HTTPException(status_code=404, detail="Repository not found.")
+
+    history = []
+    for pull_request in store.pull_requests.values():
+        if pull_request.repository_id != repository_id:
+            continue
+        metrics = store.metrics.get(pull_request.pull_request_id)
+        comments = store.comments.get(pull_request.pull_request_id, [])
+        history.append(
+            {
+                "pull_request_id": pull_request.pull_request_id,
+                "number": pull_request.number,
+                "title": pull_request.title,
+                "status": pull_request.status,
+                "issue_count": metrics.total_issues_count if metrics else 0,
+                "quality_score": metrics.code_quality_score if metrics else 0.0,
+                "avg_complexity": metrics.avg_complexity if metrics else 0.0,
+                "updated_date": pull_request.updated_date,
+                "comment_count": len(comments),
+            }
+        )
+
+    history.sort(key=lambda item: item["updated_date"], reverse=True)
+    return AnalysisHistoryResponse(repository_id=repository_id, history=history)
 
 
 @app.post("/repositories/{repository_id}/pull-requests/{pull_request_number}/analyze")
@@ -132,3 +212,30 @@ def generate_report(repository_id: str) -> ReportResponse:
     if repository_id not in store.repositories:
         raise HTTPException(status_code=404, detail="Repository not found.")
     return ReportResponse(**report_service.generate_report(repository_id))
+
+
+@app.get("/reports/{repository_id}/download")
+def download_report(repository_id: str) -> Response:
+    repository = store.repositories.get(repository_id)
+    if not repository:
+        raise HTTPException(status_code=404, detail="Repository not found.")
+
+    report = report_service.generate_report(repository_id)
+    csv_buffer = StringIO()
+    csv_buffer.write("field,value\n")
+    csv_buffer.write(f"repository,{repository.owner}/{repository.repo_name}\n")
+    csv_buffer.write(f"generated_at,{report['generated_at'].isoformat()}\n")
+    csv_buffer.write(f"pull_request_count,{report['pull_request_count']}\n")
+    csv_buffer.write(f"total_issue_count,{report['total_issue_count']}\n")
+    csv_buffer.write(f"average_quality_score,{report['average_quality_score']}\n")
+    for severity, count in report["issues_by_severity"].items():
+        csv_buffer.write(f"issues_{severity},{count}\n")
+
+    filename = f"{repository.repo_name or repository.name}-report.csv"
+    return Response(
+        content=csv_buffer.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )

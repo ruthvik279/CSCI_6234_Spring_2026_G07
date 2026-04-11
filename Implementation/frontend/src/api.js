@@ -46,8 +46,8 @@ export function createRepository(payload) {
   return postJson("/repositories", payload);
 }
 
-export function submitPullRequest(payload) {
-  return postJson("/webhooks/pull-request", payload);
+export function listRepositories() {
+  return getJson("/repositories");
 }
 
 export function listPullRequests(repositoryId) {
@@ -56,4 +56,24 @@ export function listPullRequests(repositoryId) {
 
 export function analyzePullRequest(repositoryId, pullRequestNumber) {
   return postJson(`/repositories/${repositoryId}/pull-requests/${pullRequestNumber}/analyze`, {});
+}
+
+export function fetchRules(repositoryId) {
+  return getJson(`/repositories/${repositoryId}/rules`);
+}
+
+export function updateRules(payload) {
+  return postJson("/rules", payload);
+}
+
+export function fetchReport(repositoryId) {
+  return getJson(`/reports/${repositoryId}`);
+}
+
+export function fetchAnalysisHistory(repositoryId) {
+  return getJson(`/repositories/${repositoryId}/history`);
+}
+
+export function getReportDownloadUrl(repositoryId) {
+  return `${API_BASE}/reports/${repositoryId}/download`;
 }

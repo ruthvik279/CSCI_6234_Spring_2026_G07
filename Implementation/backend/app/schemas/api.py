@@ -40,6 +40,18 @@ class RuleUpdateRequest(BaseModel):
     rules: List[RulePayload]
 
 
+class RepositorySummary(BaseModel):
+    repository_id: str
+    name: str
+    github_url: str
+    owner: str
+    repo_name: str
+
+
+class RepositoryListResponse(BaseModel):
+    repositories: List[RepositorySummary]
+
+
 class GitHubPullRequestSummary(BaseModel):
     number: int
     title: str
@@ -51,6 +63,23 @@ class GitHubPullRequestSummary(BaseModel):
 class GitHubPullRequestListResponse(BaseModel):
     repository_id: str
     pull_requests: List[GitHubPullRequestSummary]
+
+
+class AnalysisHistoryEntry(BaseModel):
+    pull_request_id: str
+    number: int
+    title: str
+    status: str
+    issue_count: int
+    quality_score: float
+    avg_complexity: float
+    updated_date: datetime
+    comment_count: int
+
+
+class AnalysisHistoryResponse(BaseModel):
+    repository_id: str
+    history: List[AnalysisHistoryEntry]
 
 
 class DashboardResponse(BaseModel):
