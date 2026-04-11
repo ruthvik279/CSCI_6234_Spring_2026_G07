@@ -19,6 +19,11 @@ class ReviewService:
             ComplexityAnalyzer(),
             SecurityAnalyzer(),
         ]
+        self.severity_penalties = {
+            "low": 3.0,
+            "medium": 8.0,
+            "high": 20.0,
+        }
 
     def process_pull_request(self, payload: PullRequestWebhookPayload) -> dict:
         files = [
@@ -106,7 +111,10 @@ class ReviewService:
         store.comments[pull_request.pull_request_id] = comments
 
         avg_complexity = self._estimate_average_complexity(pull_request.files)
-        quality_score = max(0.0, 100.0 - len(issues) * 7.5 - avg_complexity * 0.5)
+        issue_penalty = sum(
+            self.severity_penalties.get(issue.severity.lower(), 5.0) for issue in issues
+        )
+        quality_score = max(0.0, 100.0 - issue_penalty - avg_complexity * 0.5)
         metrics = QualityMetrics(
             metrics_id=str(uuid4()),
             pull_request_id=pull_request.pull_request_id,
