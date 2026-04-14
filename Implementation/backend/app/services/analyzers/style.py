@@ -7,6 +7,7 @@ from app.services.analyzers.base import Analyzer
 class StyleAnalyzer(Analyzer):
     issue_type = "style"
     severity = "low"
+    rules: list[str] = ["line-length", "trailing-whitespace"]
 
     def analyze(self, file_change: FileChange, config: dict | None = None) -> list[Issue]:
         issues: list[Issue] = []
@@ -34,3 +35,6 @@ class StyleAnalyzer(Analyzer):
                     issue.severity = severity
                 issues.append(issue)
         return issues
+
+    def checkStyle(self, file_change: FileChange, config: dict | None = None) -> list[Issue]:
+        return self.analyze(file_change, config)

@@ -7,12 +7,29 @@ from app.services.analyzers.base import Analyzer
 class ComplexityAnalyzer(Analyzer):
     issue_type = "complexity"
     severity = "medium"
+    threshold = 15
 
     def analyze(self, file_change: FileChange, config: dict | None = None) -> list[Issue]:
         issues: list[Issue] = []
         control_flow_terms = ("if ", "for ", "while ", "case ", "catch ", "elif ", "switch ")
-        threshold = int((config or {}).get("threshold") or 15)
+        threshold = int((config or {}).get("threshold") or self.threshold)
         severity = (config or {}).get("severity")
+        complexity_score, hottest_line = self.calculateComplexity(file_change)
+
+        if complexity_score > threshold:
+            issue = self.build_issue(
+                file_change=file_change,
+                line_number=hottest_line,
+                message=f"Estimated complexity score {complexity_score} exceeds the threshold of {threshold}.",
+                suggestion="Split the logic into smaller functions or simplify branching.",
+            )
+            if severity:
+                issue.severity = severity
+            issues.append(issue)
+        return issues
+
+    def calculateComplexity(self, file_change: FileChange) -> tuple[int, int]:
+        control_flow_terms = ("if ", "for ", "while ", "case ", "catch ", "elif ", "switch ")
         complexity_score = 1
         hottest_line = 1
         hottest_line_score = 0
@@ -30,14 +47,4 @@ class ComplexityAnalyzer(Analyzer):
                 hottest_line_score = branch_score
                 hottest_line = line_number
 
-        if complexity_score > threshold:
-            issue = self.build_issue(
-                file_change=file_change,
-                line_number=hottest_line,
-                message=f"Estimated complexity score {complexity_score} exceeds the threshold of {threshold}.",
-                suggestion="Split the logic into smaller functions or simplify branching.",
-            )
-            if severity:
-                issue.severity = severity
-            issues.append(issue)
-        return issues
+        return complexity_score, hottest_line

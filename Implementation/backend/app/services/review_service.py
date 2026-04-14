@@ -118,7 +118,7 @@ class ReviewService:
             ReviewComment(
                 comment_id=str(uuid4()),
                 pull_request_id=pull_request.pull_request_id,
-                body=f"{issue.severity.upper()}: {issue.message} Suggestion: {issue.suggestion}",
+                body=issue.format(),
                 file_path=issue.file_path,
                 line_number=issue.line_number,
                 created_date=datetime.utcnow(),
@@ -141,7 +141,7 @@ class ReviewService:
             code_quality_score=round(quality_score, 2),
             avg_complexity=round(avg_complexity, 2),
         )
-        store.metrics[pull_request.pull_request_id] = metrics
+        metrics.store()
 
         return {
             "pull_request_id": pull_request.pull_request_id,

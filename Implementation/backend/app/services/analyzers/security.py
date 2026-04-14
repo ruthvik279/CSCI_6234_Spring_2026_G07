@@ -9,6 +9,7 @@ from app.services.analyzers.base import Analyzer
 class SecurityAnalyzer(Analyzer):
     issue_type = "security"
     severity = "high"
+    patterns = ["password", "secret", "api_key", "token", "access_key"]
 
     def analyze(self, file_change: FileChange, config: dict | None = None) -> list[Issue]:
         issues: list[Issue] = []
@@ -43,3 +44,6 @@ class SecurityAnalyzer(Analyzer):
                     issue.severity = severity
                 issues.append(issue)
         return issues
+
+    def detectVulnerabilities(self, file_change: FileChange, config: dict | None = None) -> list[Issue]:
+        return self.analyze(file_change, config)

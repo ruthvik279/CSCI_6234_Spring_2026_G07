@@ -18,6 +18,22 @@ class Repository:
     access_token: str = ""
     is_active: bool = True
 
+    @property
+    def id(self) -> str:
+        return self.repository_id
+
+    @property
+    def githubUrl(self) -> str:
+        return self.github_url
+
+    def connect(self) -> bool:
+        self.is_active = True
+        return self.is_active
+
+    def disconnect(self) -> bool:
+        self.is_active = False
+        return self.is_active
+
 
 @dataclass
 class FileChange:
@@ -28,6 +44,9 @@ class FileChange:
     deletions: int
     change_type: str
     patch: str = ""
+
+    def parseCode(self) -> str:
+        return self.parse_code()
 
     def parse_code(self) -> str:
         return "\n".join(line for _, line in self.parsed_lines())
@@ -80,6 +99,20 @@ class PullRequest:
     updated_date: datetime
     files: List[FileChange] = field(default_factory=list)
 
+    @property
+    def id(self) -> str:
+        return self.pull_request_id
+
+    @property
+    def filesChanged(self) -> List[FileChange]:
+        return self.files
+
+    def fetchChanges(self) -> List[FileChange]:
+        return self.files
+
+    def getReviewStatus(self) -> str:
+        return self.status
+
 
 @dataclass
 class Issue:
@@ -92,6 +125,13 @@ class Issue:
     detected_date: datetime
     file_path: str
 
+    @property
+    def lineNumber(self) -> int:
+        return self.line_number
+
+    def format(self) -> str:
+        return f"{self.severity.upper()}: {self.message} Suggestion: {self.suggestion}"
+
 
 @dataclass
 class ReviewComment:
@@ -101,6 +141,26 @@ class ReviewComment:
     file_path: str
     line_number: int
     created_date: datetime
+
+    @property
+    def id(self) -> str:
+        return self.comment_id
+
+    @property
+    def path(self) -> str:
+        return self.file_path
+
+    @property
+    def position(self) -> int:
+        return self.line_number
+
+    def post(self) -> dict:
+        return {
+            "id": self.comment_id,
+            "body": self.body,
+            "path": self.file_path,
+            "position": self.line_number,
+        }
 
 
 @dataclass
@@ -120,3 +180,20 @@ class QualityMetrics:
     total_issues_count: int
     code_quality_score: float
     avg_complexity: float
+
+    @property
+    def avgComplexity(self) -> float:
+        return self.avg_complexity
+
+    @property
+    def issueCount(self) -> int:
+        return self.total_issues_count
+
+    def calculate(self) -> float:
+        return self.code_quality_score
+
+    def store(self) -> "QualityMetrics":
+        from app.store.memory import store
+
+        store.metrics[self.pull_request_id] = self
+        return self
