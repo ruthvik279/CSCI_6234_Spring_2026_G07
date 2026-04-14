@@ -58,6 +58,7 @@ class GitHubPullRequestSummary(BaseModel):
     state: str
     author: str
     html_url: str
+    updated_at: str | None = None
 
 
 class GitHubPullRequestListResponse(BaseModel):
@@ -87,11 +88,13 @@ class DashboardResponse(BaseModel):
     pull_request_count: int
     total_issue_count: int
     average_quality_score: float
+    filtered_days: int | None = None
 
 
 class ReportResponse(BaseModel):
     generated_at: datetime
     repository_id: str
+    days: int | None = None
     pull_request_count: int
     total_issue_count: int
     average_quality_score: float

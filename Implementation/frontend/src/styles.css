@@ -206,6 +206,36 @@ body {
   gap: 14px;
 }
 
+.trend-strip {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  min-height: 130px;
+  margin-bottom: 18px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(19, 34, 56, 0.08);
+}
+
+.trend-item {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-width: 32px;
+}
+
+.trend-item span {
+  font-size: 0.8rem;
+  color: #50657c;
+}
+
+.trend-bar {
+  width: 28px;
+  border-radius: 12px 12px 4px 4px;
+  background: linear-gradient(180deg, #d96d2c, #173452);
+}
+
 .repo-card {
   display: grid;
   gap: 6px;

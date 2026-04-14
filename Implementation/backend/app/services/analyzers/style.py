@@ -8,16 +8,29 @@ class StyleAnalyzer(Analyzer):
     issue_type = "style"
     severity = "low"
 
-    def analyze(self, file_change: FileChange) -> list[Issue]:
+    def analyze(self, file_change: FileChange, config: dict | None = None) -> list[Issue]:
         issues: list[Issue] = []
-        for index, line in enumerate(file_change.parse_code().splitlines(), start=1):
-            if len(line) > 100:
-                issues.append(
-                    self.build_issue(
-                        file_change=file_change,
-                        line_number=index,
-                        message="Line exceeds 100 characters.",
-                        suggestion="Wrap the statement or extract part of the expression.",
-                    )
+        threshold = int((config or {}).get("threshold") or 100)
+        severity = (config or {}).get("severity")
+        for line_number, line in file_change.parsed_lines():
+            if len(line) > threshold:
+                issue = self.build_issue(
+                    file_change=file_change,
+                    line_number=line_number,
+                    message=f"Line exceeds {threshold} characters.",
+                    suggestion="Wrap the statement or extract part of the expression.",
                 )
+                if severity:
+                    issue.severity = severity
+                issues.append(issue)
+            if line.rstrip() != line:
+                issue = self.build_issue(
+                    file_change=file_change,
+                    line_number=line_number,
+                    message="Trailing whitespace detected.",
+                    suggestion="Remove trailing spaces to keep diffs cleaner.",
+                )
+                if severity:
+                    issue.severity = severity
+                issues.append(issue)
         return issues

@@ -1,7 +1,11 @@
 const API_BASE = "http://127.0.0.1:8000";
 
-export async function fetchDashboard() {
-  const response = await fetch(`${API_BASE}/dashboard`);
+function withDays(path, days) {
+  return days ? `${path}?days=${days}` : path;
+}
+
+export async function fetchDashboard(days = null) {
+  const response = await fetch(`${API_BASE}${withDays("/dashboard", days)}`);
   if (!response.ok) {
     throw new Error("Unable to load dashboard data.");
   }
@@ -66,14 +70,14 @@ export function updateRules(payload) {
   return postJson("/rules", payload);
 }
 
-export function fetchReport(repositoryId) {
-  return getJson(`/reports/${repositoryId}`);
+export function fetchReport(repositoryId, days = null) {
+  return getJson(withDays(`/reports/${repositoryId}`, days));
 }
 
-export function fetchAnalysisHistory(repositoryId) {
-  return getJson(`/repositories/${repositoryId}/history`);
+export function fetchAnalysisHistory(repositoryId, days = null) {
+  return getJson(withDays(`/repositories/${repositoryId}/history`, days));
 }
 
-export function getReportDownloadUrl(repositoryId) {
-  return `${API_BASE}/reports/${repositoryId}/download`;
+export function getReportDownloadUrl(repositoryId, days = null) {
+  return `${API_BASE}${withDays(`/reports/${repositoryId}/download`, days)}`;
 }

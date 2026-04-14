@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List
@@ -11,6 +12,7 @@ class Repository:
     name: str
     github_url: str
     webhook_url: str
+    webhook_secret: str = ""
     owner: str = ""
     repo_name: str = ""
     access_token: str = ""
@@ -28,7 +30,42 @@ class FileChange:
     patch: str = ""
 
     def parse_code(self) -> str:
-        return self.patch
+        return "\n".join(line for _, line in self.parsed_lines())
+
+    def parsed_lines(self) -> list[tuple[int, str]]:
+        if not self.patch:
+            return []
+
+        parsed: list[tuple[int, str]] = []
+        current_line_number: int | None = None
+        hunk_pattern = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
+
+        for raw_line in self.patch.splitlines():
+            hunk_match = hunk_pattern.match(raw_line)
+            if hunk_match:
+                current_line_number = int(hunk_match.group(1))
+                continue
+
+            if current_line_number is None:
+                continue
+
+            if raw_line.startswith("+") and not raw_line.startswith("+++"):
+                parsed.append((current_line_number, raw_line[1:]))
+                current_line_number += 1
+                continue
+
+            if raw_line.startswith(" ") or raw_line == "":
+                parsed.append((current_line_number, raw_line[1:] if raw_line.startswith(" ") else raw_line))
+                current_line_number += 1
+                continue
+
+            if raw_line.startswith("-") and not raw_line.startswith("---"):
+                continue
+
+        if parsed:
+            return parsed
+
+        return [(index, line) for index, line in enumerate(self.patch.splitlines(), start=1)]
 
 
 @dataclass

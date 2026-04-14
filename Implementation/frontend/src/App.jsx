@@ -17,6 +17,7 @@ const fallbackMetrics = {
   pull_request_count: 0,
   total_issue_count: 0,
   average_quality_score: 0,
+  filtered_days: null,
 };
 
 const initialRepositoryForm = {
@@ -24,6 +25,22 @@ const initialRepositoryForm = {
   github_url: "https://github.com/example/demo-repo",
   access_token: "demo-token",
 };
+
+function extractSeverity(commentBody) {
+  const match = commentBody.match(/^(LOW|MEDIUM|HIGH):/);
+  return match ? match[1].toLowerCase() : "medium";
+}
+
+function groupCommentsByFile(comments) {
+  return comments.reduce((groups, comment) => {
+    const filePath = comment.file_path || "Unknown file";
+    if (!groups[filePath]) {
+      groups[filePath] = [];
+    }
+    groups[filePath].push(comment);
+    return groups;
+  }, {});
+}
 
 export default function App() {
   const [metrics, setMetrics] = useState(fallbackMetrics);
@@ -38,22 +55,39 @@ export default function App() {
   const [lastRun, setLastRun] = useState(null);
   const [message, setMessage] = useState("");
   const [busyAction, setBusyAction] = useState("");
+  const [daysFilter, setDaysFilter] = useState(30);
 
   async function refreshDashboard() {
-    const data = await fetchDashboard();
+    const data = await fetchDashboard(daysFilter);
     setMetrics(data);
     setStatus("ready");
+  }
+
+  async function loadRepositoryWorkspace(repositoryId) {
+    try {
+      const [rulesData, reportData, historyData, pullRequestData] = await Promise.all([
+        fetchRules(repositoryId),
+        fetchReport(repositoryId, daysFilter),
+        fetchAnalysisHistory(repositoryId, daysFilter),
+        listPullRequests(repositoryId).catch(() => ({ pull_requests: [] })),
+      ]);
+      setRules(rulesData.rules);
+      setReport(reportData);
+      setHistory(historyData.history);
+      setPullRequests(pullRequestData.pull_requests);
+    } catch (error) {
+      setMessage(error.message);
+    }
   }
 
   useEffect(() => {
     let active = true;
 
     refreshDashboard()
-      .then((data) => {
+      .then(() => {
         if (!active) {
           return;
         }
-        return data;
       })
       .catch(() => {
         if (!active) {
@@ -65,7 +99,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [daysFilter]);
 
   useEffect(() => {
     listRepositories()
@@ -83,7 +117,7 @@ export default function App() {
       return;
     }
     loadRepositoryWorkspace(activeRepository.repository_id);
-  }, [activeRepository?.repository_id]);
+  }, [activeRepository?.repository_id, daysFilter]);
 
   function updateRepositoryField(event) {
     const { name, value } = event.target;
@@ -96,23 +130,6 @@ export default function App() {
         ruleIndex === index ? { ...rule, [field]: value } : rule
       )
     );
-  }
-
-  async function loadRepositoryWorkspace(repositoryId) {
-    try {
-      const [rulesData, reportData, historyData, pullRequestData] = await Promise.all([
-        fetchRules(repositoryId),
-        fetchReport(repositoryId),
-        fetchAnalysisHistory(repositoryId),
-        listPullRequests(repositoryId).catch(() => ({ pull_requests: [] })),
-      ]);
-      setRules(rulesData.rules);
-      setReport(reportData);
-      setHistory(historyData.history);
-      setPullRequests(pullRequestData.pull_requests);
-    } catch (error) {
-      setMessage(error.message);
-    }
   }
 
   async function handleRepositorySubmit(event) {
@@ -169,7 +186,9 @@ export default function App() {
       const result = await analyzePullRequest(activeRepository.repository_id, pullRequestNumber);
       setLastRun(result);
       await loadRepositoryWorkspace(activeRepository.repository_id);
-      setMessage(`Analyzed GitHub pull request #${pullRequestNumber}.`);
+      setMessage(
+        `Analyzed GitHub pull request #${pullRequestNumber} and posted a summary comment back to GitHub.`
+      );
       await refreshDashboard();
     } catch (error) {
       setMessage(error.message);
@@ -194,11 +213,14 @@ export default function App() {
           name: rule.name,
           severity: rule.severity,
           is_enabled: rule.is_enabled,
-          threshold: rule.threshold === "" || rule.threshold === null ? null : Number(rule.threshold),
+          threshold:
+            rule.threshold === "" || rule.threshold === null
+              ? null
+              : Number(rule.threshold),
         })),
       });
       setRules(result.rules);
-      setMessage("Rules updated successfully.");
+      setMessage("Rules updated successfully. New analyses will respect these settings.");
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -211,12 +233,13 @@ export default function App() {
       setMessage("Connect a GitHub repository first.");
       return;
     }
+
     setBusyAction("refresh-report");
     setMessage("");
     try {
-      const reportData = await fetchReport(activeRepository.repository_id);
+      const reportData = await fetchReport(activeRepository.repository_id, daysFilter);
       setReport(reportData);
-      const historyData = await fetchAnalysisHistory(activeRepository.repository_id);
+      const historyData = await fetchAnalysisHistory(activeRepository.repository_id, daysFilter);
       setHistory(historyData.history);
       setMessage("Report refreshed.");
     } catch (error) {
@@ -226,14 +249,17 @@ export default function App() {
     }
   }
 
+  const commentGroups = lastRun ? groupCommentsByFile(lastRun.comments) : {};
+
   return (
     <main className="app-shell">
       <section className="hero">
         <p className="eyebrow">Code Review Automation Assistant</p>
         <h1>Review pull requests faster with automated quality checks.</h1>
         <p className="lede">
-          This starter dashboard reflects the UML use cases: connect repositories,
-          configure rules, review findings, and generate reports.
+          This dashboard now covers the core UML flows: connect repositories,
+          configure rules, analyze pull requests, review findings, and generate
+          downloadable reports.
         </p>
       </section>
 
@@ -263,6 +289,20 @@ export default function App() {
             ? "Backend connection is active."
             : "Backend not running yet. Start the FastAPI server to populate live metrics."}
         </p>
+        <div className="inline-grid">
+          <label>
+            Dashboard / Report Window
+            <select
+              value={daysFilter}
+              onChange={(event) => setDaysFilter(Number(event.target.value))}
+            >
+              <option value={7}>Last 7 days</option>
+              <option value={30}>Last 30 days</option>
+              <option value={90}>Last 90 days</option>
+              <option value={365}>Last 365 days</option>
+            </select>
+          </label>
+        </div>
         {message ? <p className="feedback">{message}</p> : null}
       </section>
 
@@ -273,9 +313,7 @@ export default function App() {
               <p className="eyebrow">Step 1</p>
               <h2>Connect Repository</h2>
             </div>
-            <span className="badge">
-              {activeRepository ? "Connected" : "Waiting"}
-            </span>
+            <span className="badge">{activeRepository ? "Connected" : "Waiting"}</span>
           </div>
 
           <form className="form" onSubmit={handleRepositorySubmit}>
@@ -300,9 +338,11 @@ export default function App() {
             <label>
               Access Token
               <input
+                type="password"
                 name="access_token"
                 value={repositoryForm.access_token}
                 onChange={updateRepositoryField}
+                autoComplete="off"
                 required
               />
             </label>
@@ -316,9 +356,7 @@ export default function App() {
               <h3>Active Repository</h3>
               <p>{activeRepository.name}</p>
               <p className="muted">{activeRepository.github_url}</p>
-              <p className="muted">
-                Repository ID: {activeRepository.repository_id}
-              </p>
+              <p className="muted">Repository ID: {activeRepository.repository_id}</p>
             </div>
           ) : null}
         </article>
@@ -352,8 +390,9 @@ export default function App() {
                   <p className="comment-path">PR #{pullRequest.number}</p>
                   <h3>{pullRequest.title}</h3>
                   <p className="muted">
-                    {pullRequest.author} • {pullRequest.state}
+                    {pullRequest.author} | {pullRequest.state}
                   </p>
+                  <p className="muted">Updated: {pullRequest.updated_at || "unknown"}</p>
                   <p>
                     <a href={pullRequest.html_url} target="_blank" rel="noreferrer">
                       View on GitHub
@@ -377,7 +416,6 @@ export default function App() {
             </div>
           )}
         </article>
-
       </section>
 
       <section className="workspace">
@@ -396,7 +434,9 @@ export default function App() {
                 <button
                   type="button"
                   className={`repo-card ${
-                    activeRepository?.repository_id === repository.repository_id ? "repo-card-active" : ""
+                    activeRepository?.repository_id === repository.repository_id
+                      ? "repo-card-active"
+                      : ""
                   }`}
                   key={repository.repository_id}
                   onClick={() => setActiveRepository(repository)}
@@ -433,18 +473,26 @@ export default function App() {
                     .map(([severity, count]) => `${severity} ${count}`)
                     .join(", ")}
                 </p>
-                <p className="muted">
-                  Quality score: {lastRun.metrics.code_quality_score}
-                </p>
+                <p className="muted">Quality score: {lastRun.metrics.code_quality_score}</p>
+                <p className="muted">A summary review comment was posted back to GitHub.</p>
               </div>
 
               <div className="comment-list">
-                {lastRun.comments.map((comment) => (
-                  <article className="comment-card" key={comment.comment_id}>
-                    <p className="comment-path">
-                      {comment.file_path}:{comment.line_number}
-                    </p>
-                    <p>{comment.body}</p>
+                {Object.entries(commentGroups).map(([filePath, comments]) => (
+                  <article className="comment-card" key={filePath}>
+                    <p className="comment-path">{filePath}</p>
+                    <h3>Inline Review Simulation</h3>
+                    <div className="results-stack">
+                      {comments.map((comment) => (
+                        <div className="result-box" key={comment.comment_id}>
+                          <p className="comment-path">Line {comment.line_number}</p>
+                          <p className="muted">
+                            Severity: {extractSeverity(comment.body)}
+                          </p>
+                          <p>{comment.body}</p>
+                        </div>
+                      ))}
+                    </div>
                   </article>
                 ))}
               </div>
@@ -476,7 +524,9 @@ export default function App() {
                       <input
                         type="checkbox"
                         checked={rule.is_enabled}
-                        onChange={(event) => updateRule(index, "is_enabled", event.target.checked)}
+                        onChange={(event) =>
+                          updateRule(index, "is_enabled", event.target.checked)
+                        }
                       />
                       Enabled
                     </label>
@@ -533,7 +583,7 @@ export default function App() {
               {activeRepository ? (
                 <a
                   className="secondary-button link-button"
-                  href={getReportDownloadUrl(activeRepository.repository_id)}
+                  href={getReportDownloadUrl(activeRepository.repository_id, daysFilter)}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -550,6 +600,7 @@ export default function App() {
                 <p>Pull requests analyzed: {report.pull_request_count}</p>
                 <p>Total issues found: {report.total_issue_count}</p>
                 <p>Average quality score: {report.average_quality_score}</p>
+                <p className="muted">Window: last {report.days ?? "all"} days</p>
               </div>
               <div className="result-box">
                 <h3>Issues By Severity</h3>
@@ -581,13 +632,29 @@ export default function App() {
           </div>
 
           {history.length ? (
+            <div className="trend-strip">
+              {history.slice(0, 12).map((entry) => (
+                <div key={`${entry.pull_request_id}-bar`} className="trend-item">
+                  <div
+                    className="trend-bar"
+                    style={{ height: `${Math.max(18, entry.quality_score)}px` }}
+                    title={`${entry.title}: ${entry.quality_score}`}
+                  />
+                  <span>#{entry.number}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {history.length ? (
             <div className="results-stack">
               {history.map((entry) => (
                 <article className="comment-card" key={entry.pull_request_id}>
                   <p className="comment-path">PR #{entry.number}</p>
                   <h3>{entry.title}</h3>
                   <p className="muted">
-                    status: {entry.status} | issues: {entry.issue_count} | comments: {entry.comment_count}
+                    status: {entry.status} | issues: {entry.issue_count} | comments:{" "}
+                    {entry.comment_count}
                   </p>
                   <p className="muted">
                     quality score: {entry.quality_score} | avg complexity: {entry.avg_complexity}

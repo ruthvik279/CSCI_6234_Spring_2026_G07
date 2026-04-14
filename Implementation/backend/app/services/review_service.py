@@ -14,11 +14,11 @@ from app.store.memory import store
 
 class ReviewService:
     def __init__(self) -> None:
-        self.analyzers = [
-            StyleAnalyzer(),
-            ComplexityAnalyzer(),
-            SecurityAnalyzer(),
-        ]
+        self.analyzer_map = {
+            "line-length": StyleAnalyzer(),
+            "complexity": ComplexityAnalyzer(),
+            "secrets": SecurityAnalyzer(),
+        }
         self.severity_penalties = {
             "low": 3.0,
             "medium": 8.0,
@@ -79,23 +79,40 @@ class ReviewService:
         status: str,
         files: list[FileChange],
     ) -> dict:
+        existing_pull_request = self._find_existing_pull_request(repository_id, number)
+        created_date = existing_pull_request.created_date if existing_pull_request else datetime.utcnow()
+        pull_request_id = existing_pull_request.pull_request_id if existing_pull_request else str(uuid4())
         pull_request = PullRequest(
-            pull_request_id=str(uuid4()),
+            pull_request_id=pull_request_id,
             repository_id=repository_id,
             number=number,
             title=title,
             description=description,
             status=status,
-            created_date=datetime.utcnow(),
+            created_date=created_date,
             updated_date=datetime.utcnow(),
             files=files,
         )
         store.pull_requests[pull_request.pull_request_id] = pull_request
 
         issues = []
+        rules_by_name = {
+            rule.name: {
+                "severity": rule.severity,
+                "threshold": rule.threshold,
+                "enabled": rule.is_enabled,
+            }
+            for rule in store.rules.get(repository_id, [])
+        }
         for file_change in pull_request.files:
-            for analyzer in self.analyzers:
-                issues.extend(analyzer.analyze(file_change))
+            for rule_name, analyzer in self.analyzer_map.items():
+                rule_config = rules_by_name.get(
+                    rule_name,
+                    {"severity": analyzer.severity, "threshold": None, "enabled": True},
+                )
+                if not rule_config.get("enabled", True):
+                    continue
+                issues.extend(analyzer.analyze(file_change, rule_config))
 
         comments = [
             ReviewComment(
@@ -114,7 +131,8 @@ class ReviewService:
         issue_penalty = sum(
             self.severity_penalties.get(issue.severity.lower(), 5.0) for issue in issues
         )
-        quality_score = max(0.0, 100.0 - issue_penalty - avg_complexity * 0.5)
+        issue_density_penalty = min(len(issues) * 1.5, 12.0)
+        quality_score = max(0.0, 100.0 - issue_penalty - issue_density_penalty - avg_complexity * 0.75)
         metrics = QualityMetrics(
             metrics_id=str(uuid4()),
             pull_request_id=pull_request.pull_request_id,
@@ -127,6 +145,8 @@ class ReviewService:
 
         return {
             "pull_request_id": pull_request.pull_request_id,
+            "pull_request_number": pull_request.number,
+            "pull_request_title": pull_request.title,
             "issues_found": len(issues),
             "issues_by_severity": dict(Counter(issue.severity for issue in issues)),
             "comments": comments,
@@ -138,10 +158,16 @@ class ReviewService:
             return 0.0
         scores = []
         for file_change in files:
-            score = sum(
+            score = 1 + sum(
                 1
-                for line in file_change.parse_code().splitlines()
-                if any(term in line for term in ("if ", "for ", "while ", "case ", "elif "))
+                for _, line in file_change.parsed_lines()
+                if any(term in line.lower() for term in ("if ", "for ", "while ", "case ", "elif ", "switch "))
             )
             scores.append(score)
         return sum(scores) / len(scores)
+
+    def _find_existing_pull_request(self, repository_id: str, number: int) -> PullRequest | None:
+        for pull_request in store.pull_requests.values():
+            if pull_request.repository_id == repository_id and pull_request.number == number:
+                return pull_request
+        return None
