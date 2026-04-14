@@ -256,11 +256,6 @@ export default function App() {
       <section className="hero">
         <p className="eyebrow">Code Review Automation Assistant</p>
         <h1>Review pull requests faster with automated quality checks.</h1>
-        <p className="lede">
-          This dashboard now covers the core UML flows: connect repositories,
-          configure rules, analyze pull requests, review findings, and generate
-          downloadable reports.
-        </p>
       </section>
 
       <section className="grid">
@@ -365,7 +360,7 @@ export default function App() {
           <div className="panel-heading">
             <div>
               <p className="eyebrow">Step 2</p>
-              <h2>Analyze Real GitHub Pull Requests</h2>
+              <h2>Analyze GitHub Pull Requests</h2>
             </div>
             <span className="badge">
               {lastRun ? `${lastRun.issues_found} issues found` : "No run yet"}
@@ -375,7 +370,7 @@ export default function App() {
           <div className="action-row">
             <button
               type="button"
-              className="secondary-button"
+              className="comment-action"
               onClick={handlePullRequestRefresh}
               disabled={busyAction === "refresh-pull-requests"}
             >
@@ -393,20 +388,25 @@ export default function App() {
                     {pullRequest.author} | {pullRequest.state}
                   </p>
                   <p className="muted">Updated: {pullRequest.updated_at || "unknown"}</p>
-                  <p>
-                    <a href={pullRequest.html_url} target="_blank" rel="noreferrer">
+                  <div className="button-row">
+                    <a
+                      className="comment-action link-button"
+                      href={pullRequest.html_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       View on GitHub
                     </a>
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handleAnalyzeGitHubPullRequest(pullRequest.number)}
-                    disabled={busyAction === `analyze-${pullRequest.number}`}
-                  >
-                    {busyAction === `analyze-${pullRequest.number}`
-                      ? "Analyzing..."
-                      : "Analyze This PR"}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAnalyzeGitHubPullRequest(pullRequest.number)}
+                      disabled={busyAction === `analyze-${pullRequest.number}`}
+                    >
+                      {busyAction === `analyze-${pullRequest.number}`
+                        ? "Analyzing..."
+                        : "Analyze This PR"}
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -425,7 +425,7 @@ export default function App() {
               <p className="eyebrow">Repositories</p>
               <h2>Connected Repository History</h2>
             </div>
-            <span className="badge subtle">{knownRepositories.length} tracked</span>
+            <span className="badge">{knownRepositories.length} Tracked</span>
           </div>
 
           {knownRepositories.length ? (
@@ -566,7 +566,7 @@ export default function App() {
         </article>
 
         <article className="panel">
-          <div className="panel-heading">
+          <div className="panel-heading panel-heading-wrap">
             <div>
               <p className="eyebrow">Use Case</p>
               <h2>Generate Report</h2>
@@ -574,7 +574,7 @@ export default function App() {
             <div className="button-row">
               <button
                 type="button"
-                className="secondary-button"
+                className="comment-action"
                 onClick={handleReportRefresh}
                 disabled={!activeRepository || busyAction === "refresh-report"}
               >
@@ -582,7 +582,7 @@ export default function App() {
               </button>
               {activeRepository ? (
                 <a
-                  className="secondary-button link-button"
+                  className="comment-action link-button"
                   href={getReportDownloadUrl(activeRepository.repository_id, daysFilter)}
                   target="_blank"
                   rel="noreferrer"
@@ -628,7 +628,7 @@ export default function App() {
               <p className="eyebrow">History</p>
               <h2>Analyzed Pull Request History</h2>
             </div>
-            <span className="badge subtle">{history.length} analyzed</span>
+            <span className="badge">{history.length} Analyzed</span>
           </div>
 
           {history.length ? (
