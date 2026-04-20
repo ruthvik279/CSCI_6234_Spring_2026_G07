@@ -48,7 +48,12 @@ class GitHubService:
     def default_rules(self) -> list[CodeReviewRule]:
         return [
             CodeReviewRule(rule_id=str(uuid4()), name="line-length", severity="low", threshold=100),
-            CodeReviewRule(rule_id=str(uuid4()), name="complexity", severity="medium", threshold=15),
+            CodeReviewRule(
+                rule_id=str(uuid4()),
+                name="complexity",
+                severity="medium",
+                threshold=settings.default_complexity_threshold,
+            ),
             CodeReviewRule(rule_id=str(uuid4()), name="secrets", severity="high"),
         ]
 

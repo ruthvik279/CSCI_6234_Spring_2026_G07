@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: ./Implementation/backend
+    container_name: code-review-backend
+    environment:
+      APP_NAME: Code Review Automation Assistant
+      DEFAULT_COMPLEXITY_THRESHOLD: "15"
+      PUBLIC_WEBHOOK_URL: ""
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./Implementation/frontend
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: code-review-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
