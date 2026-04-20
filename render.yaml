@@ -18,10 +18,9 @@ services:
         sync: false
       - key: CORS_ORIGIN_REGEX
         sync: false
-  - type: web
+  - type: static
     runtime: static
     name: code-review-automation-frontend
-    plan: free
     rootDir: Implementation/frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
