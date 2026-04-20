@@ -8,6 +8,8 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
       - key: APP_NAME
         value: Code Review Automation Assistant
       - key: DEFAULT_COMPLEXITY_THRESHOLD
