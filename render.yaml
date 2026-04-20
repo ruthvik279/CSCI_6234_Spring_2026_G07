@@ -18,7 +18,7 @@ services:
         sync: false
       - key: CORS_ORIGIN_REGEX
         sync: false
-  - type: static
+  - type: web
     runtime: static
     name: code-review-automation-frontend
     rootDir: Implementation/frontend
